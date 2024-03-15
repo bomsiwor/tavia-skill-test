@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import bcrypt, { hash } from "bcrypt";
 import Authentication from "../util/authentication";
 import BaseController from "./baseController";
-import { generateTimeAfter, randomString } from "../util";
+import { generateResponse, generateTimeAfter, randomString } from "../util";
 import multer, { StorageEngine } from "multer";
 import path from "path";
 const db = require("../db/model/model.js");
@@ -50,7 +50,7 @@ class AuthController extends BaseController {
         attributes: ["id", "email", "password"],
       });
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return generateResponse(res, 404, "User not found!", null);
       }
 
       //  Check password
@@ -59,7 +59,7 @@ class AuthController extends BaseController {
         user.password
       );
       if (!checkPassword) {
-        return res.status(404).json({ message: "Credential not valid" });
+        return generateResponse(res, 401, "Credential not valid!", null);
       }
 
       // Check max number of device
@@ -68,7 +68,7 @@ class AuthController extends BaseController {
         where: { user_id: user.id },
       });
       if (countDevice > 3) {
-        return res.status(400).json({ message: "Max device exceeded" });
+        return generateResponse(res, 401, "Max device exceeded!", null);
       }
 
       // Generate token, refresh token
@@ -84,14 +84,14 @@ class AuthController extends BaseController {
         expired_at: maxRefreshToken,
       });
 
-      return res.status(200).json({
+      return generateResponse(res, 200, "Success", {
         token: token,
         refreshToken: refreshToken,
         user: user.id,
       });
     } catch (error) {
       console.log(error);
-      return res.sendStatus(400).end();
+      return generateResponse(res, 500, "Error!", null);
     }
   }
 
@@ -107,7 +107,7 @@ class AuthController extends BaseController {
         attributes: ["id"],
       });
       if (existingUser) {
-        return res.status(400).json({ message: "Email already exists" });
+        return generateResponse(res, 400, "Email already exists", null);
       }
 
       // Hash the password
@@ -122,7 +122,6 @@ class AuthController extends BaseController {
       });
 
       const emailToken = randomString();
-      console.log(emailToken);
 
       const mailData = {
         from: '"Aplikasi 1" <noreply@aplikasi1.com>',
@@ -138,12 +137,14 @@ class AuthController extends BaseController {
       await newUser.save();
 
       // // Respond with success message
-      res.status(201).json({
-        message: "User registered successfully. Activation email sent.",
-      });
+      return generateResponse(
+        res,
+        200,
+        "User registered successfully. Activation email sent.",
+        null
+      );
     } catch (error) {
-      console.error("Error registering user:", error);
-      res.status(500).json({ message: "Failed to register user" });
+      return generateResponse(res, 500, "Error register", null);
     }
   }
 
@@ -155,7 +156,7 @@ class AuthController extends BaseController {
         where: { token: req.body.refreshToken },
       });
       if (!refreshToken) {
-        return res.status(401).json({ message: "Access denied" });
+        return generateResponse(res, 401, "Access denied", null);
       }
 
       // check if the current expired date of refresh token is stil valid
@@ -169,16 +170,16 @@ class AuthController extends BaseController {
         // Update if valid
         await currentAccessToken.update({ token: newAccessToken });
 
-        return res.status(200).json({
+        return generateResponse(res, 200, "Success refresh", {
           token: newAccessToken,
           refreshToken: refreshToken.token,
           user: currentAccessToken.user_id,
         });
       } else {
-        return res.status(401).json({ message: "Session expired" });
+        return generateResponse(res, 401, "Access denied", null);
       }
     } catch (error) {
-      return res.status(500).json({ message: "Error", data: error });
+      return generateResponse(res, 500, "Error Internal", null);
     }
   }
 
@@ -191,16 +192,16 @@ class AuthController extends BaseController {
         attributes: ["id"],
       });
       if (!existingUser) {
-        return res.status(400).json({ message: "Activation link not valid!" });
+        return generateResponse(res, 400, "Activation link not valid!", null);
       }
 
       existingUser.email_token = null;
       existingUser.email_verified_at = Date.now();
       await existingUser.save();
 
-      return res.status(200).json({ message: "Email activated" });
+      return generateResponse(res, 200, "Email activated!", true);
     } catch (error) {
-      return res.status(404).json("Data not found");
+      return generateResponse(res, 400, "Data not found!", true);
     }
   }
 
@@ -213,7 +214,7 @@ class AuthController extends BaseController {
         attributes: ["id", "email"],
       });
       if (!existingUser) {
-        return res.status(400).json({ message: "Account does not exists" });
+        return generateResponse(res, 404, "Account not exists", null);
       }
 
       // Generate a random string
@@ -232,9 +233,9 @@ class AuthController extends BaseController {
       existingUser.email_token = resetToken;
       await existingUser.save();
 
-      return res.status(200).json({ message: "Email reset password sent" });
+      return generateResponse(res, 200, "Email reset password sent", null);
     } catch (error) {
-      return res.status(404).json("Data not found");
+      return generateResponse(res, 404, "Data not found!", null);
     }
   }
 
@@ -247,18 +248,15 @@ class AuthController extends BaseController {
         attributes: ["id", "email"],
       });
       if (!existingUser) {
-        return res.status(400).json({ message: "Account does not exists" });
+        return generateResponse(res, 404, "Account not exists", null);
       }
 
-      return res.status(200).json({
-        message: "Found",
-        data: {
-          email: existingUser.email,
-          token: token,
-        },
+      return generateResponse(res, 200, "Email reset password discovered", {
+        email: existingUser.email,
+        token: token,
       });
     } catch (error) {
-      return res.status(404).json("Data not found");
+      return generateResponse(res, 404, "Data not found!", null);
     }
   }
 
@@ -271,9 +269,7 @@ class AuthController extends BaseController {
         attributes: ["id", "email"],
       });
       if (!existingUser) {
-        return res
-          .status(400)
-          .json({ message: "Account/Reset password does not exists" });
+        return generateResponse(res, 404, "Account not exists", null);
       }
 
       // If account exists - proceed reset account
@@ -282,13 +278,9 @@ class AuthController extends BaseController {
       existingUser.email_token = null;
       await existingUser.save();
 
-      return res.status(200).json({
-        message: "new Password saved",
-        data: true,
-      });
+      return generateResponse(res, 200, "new Password saved", true);
     } catch (error) {
-      console.log(error);
-      return res.status(404).json({ message: "error", data: error });
+      return generateResponse(res, 404, "Error", null);
     }
   }
 
@@ -314,9 +306,9 @@ class AuthController extends BaseController {
       refreshToken.destroy();
       accessToken.destroy();
 
-      return res.status(200).json({ message: "logged out" });
+      return generateResponse(res, 200, "Logged out", true);
     } catch (error) {
-      return res.status(401).json({ message: "Access denied" });
+      return generateResponse(res, 500, "Error logout", true);
     }
   }
 
@@ -328,9 +320,9 @@ class AuthController extends BaseController {
         attributes: ["id", "name", "email"],
       });
 
-      return res.status(200).json({ message: "success", data: user });
+      return generateResponse(res, 200, "Success", user);
     } catch (error) {
-      return res.status(401).json({ message: "Access denied" });
+      return generateResponse(res, 200, "Access denied", null);
     }
   }
 }

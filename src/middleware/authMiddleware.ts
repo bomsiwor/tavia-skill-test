@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { generateResponse } from "../util";
 const db = require("../db/model/model.js");
 
 export const auth = (req: Request, res: Response, next: NextFunction): any => {
@@ -19,7 +20,7 @@ export const auth = (req: Request, res: Response, next: NextFunction): any => {
         where: { token: token },
       });
     if (!checkToken) {
-      return res.status(401).json({ message: "Session expired" });
+      return generateResponse(res, 401, "Session expired", null);
     }
 
     const credential: string | object = jwt.verify(token, secretKey);
@@ -29,7 +30,7 @@ export const auth = (req: Request, res: Response, next: NextFunction): any => {
       req.app.locals.token = token;
       next();
     } else {
-      return res.send("Token invalid!");
+      return generateResponse(res, 401, "Token invalid", null);
     }
   } catch (err) {
     return res.send(err);

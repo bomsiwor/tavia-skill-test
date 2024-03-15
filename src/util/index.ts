@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import express from "express";
 
 export const randomString = () => {
   // Generate a random string
@@ -22,4 +23,17 @@ export const generateTimeAfter = (maxTime: number) => {
   const timestamp = afterTime.getTime();
 
   return timestamp;
+};
+
+export const generateResponse = (
+  res: express.Response,
+  code: number,
+  message: string,
+  data: any
+) => {
+  return res.status(code).json({
+    code: code,
+    message: message,
+    data: data,
+  });
 };

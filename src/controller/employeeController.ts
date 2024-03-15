@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import { promisify } from "util";
 import fs from "fs";
+import { generateResponse } from "../util";
 
 const db = require("../db/model/model.js");
 var data_exporter = require("json2csv").Parser;
@@ -148,13 +149,14 @@ class EmployeeController {
     res.status(200).end(csv_data);
   }
 
+  // Handle upload
   async upload(req: Request, res: Response) {
     try {
       // Send an appropriate response to the client
-      return res.status(200).json({ message: "File upload successful" });
+      return generateResponse(res, 200, "File uploaded", true);
     } catch (err) {
       console.error("Error storing file:", err);
-      res.status(500).send("Error storing file");
+      return generateResponse(res, 500, "Error storing file", true);
     }
   }
 
@@ -165,11 +167,10 @@ class EmployeeController {
         user_uuid: uuidv4(),
       };
       await db.Employee.create(employeeData);
-
-      return res.status(201).json({ message: "New employee data created" });
+      return generateResponse(res, 201, "New employee data created", true);
     } catch (error) {
       console.log(error);
-      return res.status(500).json({ message: "Error storing data" });
+      return generateResponse(res, 500, "Error storing data", true);
     }
   }
 }

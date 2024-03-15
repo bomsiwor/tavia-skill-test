@@ -25,7 +25,14 @@ Untuk konfigurasi awal
     npm install
 ```
 
-3. Setelah proses selesai, jalankan project dengan
+3. Migrasi & seeding kedatabase.
+
+```bash
+    npx sequelize-cli db:migrate
+    npx sequelize-cli db:seed:all
+```
+
+4. Setelah proses selesai, jalankan project dengan
 
 ```bash
     npm start
